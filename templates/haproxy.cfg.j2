@@ -1,0 +1,95 @@
+global
+  log 127.0.0.1:514 local0 notice
+  {% if haproxy_socket != '' %}
+    stats socket {{ haproxy_socket }} level admin
+  {% endif %}
+  {% if haproxy_chroot != '' %}
+    chroot {{ haproxy_chroot }}
+  {% endif %}
+    user {{ haproxy_user }}
+    group {{ haproxy_group }}
+    daemon
+    ssl-default-bind-options no-sslv3 no-tls-tickets
+    ssl-default-bind-ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+    tune.ssl.default-dh-param 2048
+  {% for global_var in haproxy_global_vars %}
+    {{ global_var }}
+  {% endfor %}
+
+  defaults
+    log global
+    mode  http
+    option  httplog
+    option  dontlognull
+  {% if haproxy_version == '1.4' %}
+          contimeout 5000
+          clitimeout 50000
+          srvtimeout 50000
+  {% else %}
+          timeout connect 5000
+          timeout client 50000
+          timeout server 50000
+  {% endif %}
+  {% if ansible_os_family == 'Debian' %}
+    errorfile 400 /etc/haproxy/errors/400.http
+    errorfile 403 /etc/haproxy/errors/403.http
+    errorfile 408 /etc/haproxy/errors/408.http
+    errorfile 500 /etc/haproxy/errors/500.http
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 504 /etc/haproxy/errors/504.http
+  {% endif %}
+
+  frontend {{ haproxy_frontend_name }}
+      bind {{ haproxy_frontend_http_bind_address }}:{{ haproxy_frontend_http_port }}
+  {% if haproxy_frontend_https_port is defined %}
+      redirect scheme https if !{ ssl_fc }
+
+      option httplog
+      option forwardfor
+      option http-server-close
+      option httpclose
+      http-response set-header Strict-Transport-Security max-age=31536000;\ includeSubdomains;\ preload
+      http-response set-header X-Frame-Options DENY
+      http-response set-header X-Content-Type-Options nosniff
+      bind {{ haproxy_frontend_https_bind_address }}:{{ haproxy_frontend_https_port }} ssl crt {{ haproxy_ssl_dest_location }}
+  {% else %}
+      mode {{ haproxy_frontend_http_mode }}
+  {% endif %}
+
+  {% for acl in haproxy_domain_to_backend %}
+  {% if acl.backend is defined %}
+      acl {{ acl.name }} hdr(host) -i {{ acl.domain_name }}
+      use_backend {{ acl.backend }} if {{ acl.name }}
+
+  {% endif %}
+  {% endfor %}
+
+  {% for acl in haproxy_domain_to_backend %}
+  backend {{ acl.backend }}
+      mode {{ haproxy_backend_mode }}
+      balance {{ haproxy_backend_balance_method }}
+      option forwardfor
+  {% if haproxy_backend_httpchk != '' %}
+      option httpchk {{ haproxy_backend_httpchk }}
+  {% endif %}
+      cookie SERVERID insert indirect
+  {% for backend_settings in acl.backend_settings %}
+      server {{ acl.backend }} {{ backend_settings.address_check }}
+
+  {% endfor %}
+  {% endfor %}
+
+  {% if haproxy_backend_name is defined %}
+  backend {{ haproxy_backend_name }}
+      mode {{ haproxy_backend_mode }}
+      balance {{ haproxy_backend_balance_method }}
+      option forwardfor
+  {% if haproxy_backend_httpchk != '' %}
+      option httpchk {{ haproxy_backend_httpchk }}
+  {% endif %}
+      cookie SERVERID insert indirect
+  {% for backend in haproxy_backend_servers %}
+      server {{ backend.name }} {{ backend.address_check }}
+  {% endfor %}
+  {% endif %}

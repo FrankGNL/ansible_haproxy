@@ -1,0 +1,53 @@
+---
+haproxy_socket: /var/lib/haproxy/stats
+haproxy_chroot: /var/lib/haproxy
+haproxy_user: haproxy
+haproxy_group: haproxy
+
+### Frontend settings.
+
+#haproxy_frontend_name: 'haproxy-frontend-name'
+#haproxy_frontend_http_bind_address: '10.64.133.69'
+#haproxy_frontend_http_port: 80
+#haproxy_frontend_http_mode: 'http'
+#haproxy_frontend_https_bind_address: '10.64.133.69'
+#haproxy_frontend_https_port: 443
+
+### SSL SETTINGS ###
+### must be a pem file including crt and key and ca
+### sudo cat <location to crt file>.crt <location to key file>.key | tee <location to pem file>.pem
+
+#haproxy_ssl_src_location:  ../../../files/certificate.pem
+#haproxy_ssl_dest_location: /etc/ssl/certificate.pem
+
+### BACKEND SETTINGS FOR USE WITH DNS NAME ###
+#haproxy_domain_to_backend:
+  # - name: pool name
+  #   domain_name: fqdn
+  #   backend: backend_name
+  #   backend_settings:
+  #     - name: servername
+  #       address: serverfqdn:port
+  # - name: pool name
+  #   domain_name: fqdn
+  #   backend: backend_name
+  #   backend_settings:
+  #     - name: servername
+  #       address: serverfqdn:port
+
+#haproxy_backend_mode: 'http'
+#haproxy_backend_balance_method: 'roundrobin'
+#haproxy_backend_httpchk: 'HEAD / HTTP/1.1\r\nHost:localhost'
+
+### BACKEND SETTINGS FOR SINGLE BACKEND
+#haproxy_backend_name: 'habackend'
+
+# List of backend servers.
+#haproxy_backend_servers: []
+  # - name: app1
+  #   address: 192.168.0.1:80
+  # - name: app2
+  #   address: 192.168.0.2:80
+
+# Extra global vars (see README for example usage).
+haproxy_global_vars: []
